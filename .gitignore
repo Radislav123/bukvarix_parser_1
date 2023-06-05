@@ -1,0 +1,22 @@
+# драйвера для selenium
+.wdm/
+
+# временные файлы
+temp*
+*template*
+
+# логи
+logs/
+
+# миграции БД
+migrations/
+
+# секреты
+secrets/
+
+# данные для парсинга
+parser_data/
+
+# разное
+TZ.docx
+downloads/
