@@ -16,7 +16,7 @@ class Progress(ProjectModel):
 
 
 class Domain(ProjectModel):
-    name = models.CharField("Домен", primary_key = True)
+    name = models.CharField("Домен", max_length = 254, primary_key = True)
     average_position = models.IntegerField("Средняя позиция")
     requests_top_10 = models.IntegerField("Запросов в ТОП 10")
     requests_top_3 = models.IntegerField("Запросов в ТОП 3")
