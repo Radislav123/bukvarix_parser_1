@@ -3,6 +3,7 @@ import os
 import random
 import shutil
 import time
+from typing import List, Dict, Tuple
 
 import openpyxl
 import pandas
@@ -57,7 +58,7 @@ class BukvarixParser:
         self.progress.save()
 
     @staticmethod
-    def get_domains() -> list[str]:
+    def get_domains() -> List[str]:
         # todo: заменить TEST_DOMAINS на DOMAINS
         book = openpyxl.load_workbook(settings.TEST_DOMAINS)
         sheet = book.active
@@ -69,7 +70,7 @@ class BukvarixParser:
         return domains
 
     @staticmethod
-    def get_filtered_domains(dataframe: pandas.DataFrame) -> dict[str, tuple[str, pandas.DataFrame]]:
+    def get_filtered_domains(dataframe: pandas.DataFrame) -> Dict[str, Tuple[str, pandas.DataFrame]]:
         """Возвращает список доменов, количество ключевых слов которого превышает 50 (settings.DOMAIN_WORDS_AMOUNT)."""
 
         domains = {}
@@ -112,6 +113,8 @@ class BukvarixParser:
         self.progress.save()
 
         for start in range(0, len(domains), settings.REQUEST_DOMAINS_AMOUNT):
+            if start != 0:
+                time.sleep(random.randint(15, 45))
             search_page = SearchPage(self.driver)
             search_page.open()
             search_page.search(domains[start:start + settings.REQUEST_DOMAINS_AMOUNT])
@@ -120,7 +123,6 @@ class BukvarixParser:
             if start + addition > len(domains):
                 addition = len(domains) - start
             self.update_progress(addition)
-            time.sleep(random.randint(15, 45))
 
         # время, чтобы скачанные файлы сохранились правильно,
         # иначе последний файл сохраняется как временный и может вообще не успеть скачаться

@@ -1,4 +1,4 @@
-import time
+from typing import List
 
 from parsing_helper.web_elements import ExtendedWebElement, ExtendedWebElementCollection
 from selenium.webdriver import Chrome
@@ -31,7 +31,7 @@ class SearchPage(BukvarixBasePage):
         self.find_button = ExtendedWebElement(self, '//input')
         self.download_button = ExtendedWebElement(self, '//a[@class = "report-download-button"]')
 
-    def search(self, domains: list[str]) -> None:
+    def search(self, domains: List[str]) -> None:
         self.search_options_selector.choose_google_moscow()
         for domain in domains:
             self.domains_input.send_keys(f"{domain}\n")

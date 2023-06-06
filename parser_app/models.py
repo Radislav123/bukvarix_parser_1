@@ -7,8 +7,8 @@ class ProjectModel(models.Model):
 
 
 class Progress(ProjectModel):
-    current = models.IntegerField("Текущий шаг парсинга", default = 0)
-    capacity = models.IntegerField("Общее количество шагов парсинга")
+    current = models.IntegerField("Текущий шаг", default = 0)
+    capacity = models.IntegerField("Общее количество шагов")
     start_time = models.DateTimeField("Время начала парсинга", auto_now = True)
 
     def __str__(self) -> str:

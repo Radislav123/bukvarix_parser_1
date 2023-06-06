@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import json
 from pathlib import Path
 
-from parser import settings
+from parser_app import settings
 
 
 # Build paths inside the project like this: BASE_DIR / "subdir".
@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    "parser",
+    "parser_app",
 ]
 
 MIDDLEWARE = [
