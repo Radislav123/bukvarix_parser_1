@@ -1,5 +1,6 @@
 import glob
 import os
+import random
 import shutil
 import time
 
@@ -17,6 +18,7 @@ from .secret_keeper import SecretKeeper
 class BukvarixParser:
     """Отвечает за весь процесс парсинга."""
 
+    progress: models.Progress
     driver: Chrome
     secrets: SecretKeeper
     _proxies: dict = None
@@ -49,6 +51,10 @@ class BukvarixParser:
 
     def teardown_method(self) -> None:
         self.driver.quit()
+
+    def update_progress(self, addition: int) -> None:
+        self.progress.current += addition
+        self.progress.save()
 
     @staticmethod
     def get_domains() -> list[str]:
@@ -92,6 +98,8 @@ class BukvarixParser:
                 domain.frequency_sum_top_10 = top_10['"!Частотность !Весь !мир"'].sum()
                 domain.frequency_sum_top_3 = top_3['"!Частотность !Весь !мир"'].sum()
                 domain.save()
+            self.update_progress(settings.REQUEST_DOMAINS_AMOUNT)
+        self.update_progress(self.progress.capacity - self.progress.current)
 
     def run(self) -> None:
         login_page = LoginPage(self.driver)
@@ -99,13 +107,20 @@ class BukvarixParser:
         login_page.login(self.secrets.bukvarix.login, self.secrets.bukvarix.password)
 
         domains = self.get_domains()
+        progress_capacity = len(domains) * 2
+        self.progress = models.Progress(capacity = progress_capacity)
+        self.progress.save()
+
         for start in range(0, len(domains), settings.REQUEST_DOMAINS_AMOUNT):
             search_page = SearchPage(self.driver)
             search_page.open()
             search_page.search(domains[start:start + settings.REQUEST_DOMAINS_AMOUNT])
             search_page.download_button.click()
-            # todo: вернуть, если будут проблемы с антиспамом
-            # time.sleep(random.randint(15, 45))
+            addition = settings.REQUEST_DOMAINS_AMOUNT
+            if start + addition > len(domains):
+                addition = len(domains) - start
+            self.update_progress(addition)
+            time.sleep(random.randint(15, 45))
 
         # время, чтобы скачанные файлы сохранились правильно,
         # иначе последний файл сохраняется как временный и может вообще не успеть скачаться

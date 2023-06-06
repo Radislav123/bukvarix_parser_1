@@ -52,9 +52,9 @@ class ProjectAdmin(admin.ModelAdmin):
     model: models.ProjectModel
 
 
-class ParsingAdmin(ProjectAdmin):
-    model = models.Parsing
-    list_display = ("start_time", "current", "all")
+class ProgressAdmin(ProjectAdmin):
+    model = models.Progress
+    list_display = ("start_time", "current", "capacity")
 
 
 class DomainAdmin(ProjectAdmin):
