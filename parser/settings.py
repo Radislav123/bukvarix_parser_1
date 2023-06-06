@@ -4,9 +4,13 @@ import os
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(f"{__file__}/.."))
 
+# настройки административной панели
+# noinspection SpellCheckingInspection
+DOWNLOAD_EXCEL_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
 # настройки парсера
-# todo: нужен ли этот параметр
 REQUEST_DOMAINS_AMOUNT = 30
+DOMAIN_WORDS_AMOUNT = 50
 
 # пути данных для парсинга
 PARSER_DATA = "parser_data"
@@ -36,7 +40,7 @@ PYTEST_ARGS = [
     "--ignore-glob=**/*base*",
 
     # соглашение об именовании тестов
-    "-o", "python_files=*.py",
+    "-o", "python_files=*parser.py",
     "-o", "python_classes=*Parser",
     "-o", "python_functions=run*",
 
