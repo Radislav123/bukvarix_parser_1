@@ -51,6 +51,9 @@ class BukvarixParser:
         self.driver = Chrome(**parameters)
         self.driver.maximize_window()
 
+        self.parsing = models.Parsing(capacity = 0)
+        self.parsing.save()
+
     def teardown_method(self) -> None:
         self.driver.quit()
 
@@ -115,6 +118,13 @@ class BukvarixParser:
             self.update_progress(settings.REQUEST_DOMAINS_AMOUNT)
         self.update_progress(self.parsing.capacity - self.parsing.current)
 
+    @staticmethod
+    def keep_parsing_history_depth():
+        # noinspection PyUnresolvedReferences
+        instances_to_delete = models.Parsing.objects.order_by("start_time")[settings.PARSING_HISTORY_DEPTH:]
+        # noinspection PyUnresolvedReferences
+        models.Parsing.objects.filter(id__in = [x.id for x in instances_to_delete]).delete()
+
     def run(self) -> None:
         login_page = LoginPage(self.driver)
         login_page.open()
@@ -122,7 +132,7 @@ class BukvarixParser:
 
         domains = self.get_domains()
         progress_capacity = len(domains) * 2
-        self.parsing = models.Parsing(capacity = progress_capacity)
+        self.parsing.capacity = progress_capacity
         self.parsing.save()
 
         for start in range(0, len(domains), settings.REQUEST_DOMAINS_AMOUNT):
@@ -145,3 +155,4 @@ class BukvarixParser:
         time.sleep(3)
 
         self.process_downloaded_data()
+        self.keep_parsing_history_depth()

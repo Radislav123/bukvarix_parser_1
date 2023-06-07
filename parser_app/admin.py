@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.db import models as django_models
 from django.http import HttpRequest, HttpResponse
 
+from run import Runner
 from . import models, settings
 
 
@@ -48,6 +49,11 @@ def download_excel(
     return response
 
 
+# noinspection PyUnusedLocal
+def run_parsing(admin_model: "DomainAdmin", request: HttpRequest, queryset: django_models.QuerySet) -> None:
+    Runner().run_from_code([])
+
+
 class ProjectAdmin(admin.ModelAdmin):
     model: models.ProjectModel
 
@@ -71,16 +77,15 @@ class DomainAdmin(ProjectAdmin):
     list_filter = ("parsing__id",)
     actions = (download_excel,)
 
+    # noinspection PyMethodMayBeStatic
     def parsing_id(self, obj: model):
         return obj.parsing.id
-
-    # noinspection PyProtectedMember,PyUnresolvedReferences
-    parsing_id.short_description = models.Domain._meta.get_field("id").verbose_name
 
 
 class DomainsParsingListAdmin(ProjectAdmin):
     model = models.DomainsParsingList
     list_display = ("domains",)
+    actions = (run_parsing,)
 
 
 def register_models():
