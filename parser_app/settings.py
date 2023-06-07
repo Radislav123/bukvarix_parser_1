@@ -11,6 +11,7 @@ DOWNLOAD_EXCEL_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spr
 # настройки парсера
 REQUEST_DOMAINS_AMOUNT = 30
 DOMAIN_WORDS_AMOUNT = 50
+PARSING_HISTORY_DEPTH = 10
 
 # пути данных для парсинга
 PARSER_DATA = "parser_data"

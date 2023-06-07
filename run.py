@@ -2,10 +2,7 @@ import copy
 import sys
 
 import pytest
-from django.contrib.auth import get_user_model
 
-# noinspection PyUnresolvedReferences
-import configure_django
 from parser_app import settings
 
 
@@ -16,15 +13,17 @@ class Runner:
 
         # опции командной строки, которые будут переданы в pytest
         pytest_options = sys.argv[1:]
+        self.run_from_code(pytest_options)
+
+    def run_from_code(self, args: list = None):
+        if args is None:
+            args = []
         self.before_pytest()
-        self.pytest(pytest_options)
+        self.pytest(args)
         self.after_pytest()
 
-    @staticmethod
-    def before_pytest():
-        user = get_user_model()
-        if not user.objects.filter(username = "admin").exists():
-            user.objects.create_superuser("admin", "", "admin")
+    def before_pytest(self):
+        pass
 
     def after_pytest(self):
         pass
@@ -37,4 +36,7 @@ class Runner:
 
 
 if __name__ == "__main__":
+    # noinspection PyUnresolvedReferences
+    import configure_django
+
     Runner().run()

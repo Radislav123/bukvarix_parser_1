@@ -52,9 +52,9 @@ class ProjectAdmin(admin.ModelAdmin):
     model: models.ProjectModel
 
 
-class ProgressAdmin(ProjectAdmin):
-    model = models.Progress
-    list_display = ("start_time", "current", "capacity")
+class ParsingAdmin(ProjectAdmin):
+    model = models.Parsing
+    list_display = ("start_time", "id", "current", "capacity")
 
 
 class DomainAdmin(ProjectAdmin):
@@ -65,9 +65,22 @@ class DomainAdmin(ProjectAdmin):
         "requests_top_10",
         "requests_top_3",
         "frequency_sum_top_10",
-        "frequency_sum_top_3"
+        "frequency_sum_top_3",
+        "parsing_id"
     )
+    list_filter = ("parsing__id",)
     actions = (download_excel,)
+
+    def parsing_id(self, obj: model):
+        return obj.parsing.id
+
+    # noinspection PyProtectedMember,PyUnresolvedReferences
+    parsing_id.short_description = models.Domain._meta.get_field("id").verbose_name
+
+
+class DomainsParsingListAdmin(ProjectAdmin):
+    model = models.DomainsParsingList
+    list_display = ("domains",)
 
 
 def register_models():

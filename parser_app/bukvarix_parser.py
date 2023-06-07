@@ -3,10 +3,11 @@ import os
 import random
 import shutil
 import time
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
 import openpyxl
 import pandas
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import Chrome, ChromeOptions
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -19,7 +20,7 @@ from .secret_keeper import SecretKeeper
 class BukvarixParser:
     """Отвечает за весь процесс парсинга."""
 
-    progress: models.Progress
+    parsing: models.Parsing
     driver: Chrome
     secrets: SecretKeeper
     _proxies: dict = None
@@ -54,19 +55,31 @@ class BukvarixParser:
         self.driver.quit()
 
     def update_progress(self, addition: int) -> None:
-        self.progress.current += addition
-        self.progress.save()
+        self.parsing.current += addition
+        self.parsing.save()
 
     @staticmethod
-    def get_domains() -> List[str]:
-        # todo: заменить TEST_DOMAINS на DOMAINS
-        book = openpyxl.load_workbook(settings.TEST_DOMAINS)
+    def read_domains_from_xlsx(path: str) -> List[str]:
+        book = openpyxl.load_workbook(path)
         sheet = book.active
         domains = []
         row = 1
         while sheet.cell(row, 1).value:
             domains.append(sheet.cell(row, 1).value)
             row += 1
+        return domains
+
+    @staticmethod
+    def get_domains() -> List[str]:
+        # domains = self.read_domains_from_xlsx(settings.TEST_DOMAINS)
+        # noinspection PyUnresolvedReferences
+        instances = models.DomainsParsingList.objects.all()
+        if len(instances) > 0:
+            instance = instances[0]
+            domains = [x.strip() for x in instance.domains.split()]
+            domains = [x for x in domains if x]
+        else:
+            domains = []
         return domains
 
     @staticmethod
@@ -89,7 +102,7 @@ class BukvarixParser:
             dataframe = pandas.read_csv(filename, delimiter = ';')
             filtered_domains = self.get_filtered_domains(dataframe)
             for header in filtered_domains:
-                domain = models.Domain(name = filtered_domains[header][0])
+                domain = models.Domain(name = filtered_domains[header][0], parsing = self.parsing)
                 filtered = filtered_domains[header][1]
                 domain.average_position = int(filtered[header].mean())
                 top_10 = filtered[filtered[header] <= 10]
@@ -100,7 +113,7 @@ class BukvarixParser:
                 domain.frequency_sum_top_3 = top_3['"!Частотность !Весь !мир"'].sum()
                 domain.save()
             self.update_progress(settings.REQUEST_DOMAINS_AMOUNT)
-        self.update_progress(self.progress.capacity - self.progress.current)
+        self.update_progress(self.parsing.capacity - self.parsing.current)
 
     def run(self) -> None:
         login_page = LoginPage(self.driver)
@@ -109,8 +122,8 @@ class BukvarixParser:
 
         domains = self.get_domains()
         progress_capacity = len(domains) * 2
-        self.progress = models.Progress(capacity = progress_capacity)
-        self.progress.save()
+        self.parsing = models.Parsing(capacity = progress_capacity)
+        self.parsing.save()
 
         for start in range(0, len(domains), settings.REQUEST_DOMAINS_AMOUNT):
             if start != 0:
@@ -118,7 +131,10 @@ class BukvarixParser:
             search_page = SearchPage(self.driver)
             search_page.open()
             search_page.search(domains[start:start + settings.REQUEST_DOMAINS_AMOUNT])
-            search_page.download_button.click()
+            try:
+                search_page.download_button.click()
+            except TimeoutException:
+                pass
             addition = settings.REQUEST_DOMAINS_AMOUNT
             if start + addition > len(domains):
                 addition = len(domains) - start
