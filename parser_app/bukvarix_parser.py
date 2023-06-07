@@ -32,9 +32,8 @@ class BukvarixParser:
         options = ChromeOptions()
         # этот параметр тоже нужен, так как в режиме headless с некоторыми элементами нельзя взаимодействовать
         options.add_argument("--disable-blink-features=AutomationControlled")
-        # todo: return headless mode
-        # options.add_argument("--headless")
-        # options.add_argument("--window-size=1920,1080")
+        options.add_argument("--headless")
+        options.add_argument("--window-size=1920,1080")
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
 
         prefs = {"download.default_directory": settings.DOWNLOADS}
