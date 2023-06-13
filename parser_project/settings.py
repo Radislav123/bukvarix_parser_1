@@ -37,6 +37,7 @@ INSTALLED_APPS = [
 
     "core",
     "bukvarix_parser",
+    "web_archive_parser",
 ]
 
 MIDDLEWARE = [
@@ -71,6 +72,7 @@ WSGI_APPLICATION = "parser_project.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# noinspection PyUnresolvedReferences
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",

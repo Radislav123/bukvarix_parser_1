@@ -1,6 +1,6 @@
 import json
 
-from bukvarix_parser.settings import BukvarixSettings
+from bukvarix_parser.app_settings import BukvarixSettings
 
 
 class SecretKeeper:

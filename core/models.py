@@ -6,6 +6,18 @@ class CoreModel(models.Model):
         abstract = True
 
 
+class DomainsParsingListModel(CoreModel):
+    class Meta:
+        abstract = True
+        verbose_name_plural = "Domains Parsing List"
+
+    domains = models.TextField("Домены для парсинга")
+
+    def save(self, *args, **kwargs):
+        self.id = 0
+        super().save(*args, **kwargs)
+
+
 class Parsing(CoreModel):
     parser_name = models.CharField("Название парсера", max_length = 100)
     current = models.IntegerField("Текущий шаг", default = 0)

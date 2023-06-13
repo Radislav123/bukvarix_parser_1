@@ -3,35 +3,40 @@ import sys
 
 import pytest
 
-from bukvarix_parser.settings import BukvarixSettings
+from bukvarix_parser.app_settings import BukvarixSettings
+from core.app_settings import CoreSettings
+from web_archive_parser.app_settings import WebArchiveSettings
 
 
+class InvalidParserName(Exception):
+    pass
+
+
+# todo: copy to parsing_helper
 class Runner:
     # оригинал - https://git.miem.hse.ru/447/framework/-/blob/master/service/run.py
-    def run(self):
+    def run_from_cli(self):
         """Разбирает поступающую из командной строки команду и выполняет заданные операции."""
 
         # опции командной строки, которые будут переданы в pytest
-        pytest_options = sys.argv[1:]
-        self.run_from_code(pytest_options)
+        pytest_options = sys.argv[2:]
+        parser = sys.argv[1]
+        if parser == "bukvarix":
+            settings = BukvarixSettings()
+        elif parser == "web_archive":
+            settings = WebArchiveSettings()
+        else:
+            raise InvalidParserName()
+        self.run_from_code(settings, pytest_options)
 
-    def run_from_code(self, args: list = None):
+    def run_from_code(self, app_settings: CoreSettings, args: list = None):
         if args is None:
             args = []
-        self.before_pytest()
-        self.pytest(args)
-        self.after_pytest()
-
-    def before_pytest(self):
-        pass
-
-    def after_pytest(self):
-        pass
+        self.pytest(app_settings, args)
 
     @staticmethod
-    def pytest(args):
-        settings = BukvarixSettings()
-        pytest_args = copy.deepcopy(settings.PYTEST_ARGS)
+    def pytest(app_settings: CoreSettings, args):
+        pytest_args = copy.deepcopy(app_settings.PYTEST_ARGS)
         pytest_args.extend(args)
         pytest.main(pytest_args)
 
@@ -40,4 +45,4 @@ if __name__ == "__main__":
     # noinspection PyUnresolvedReferences
     import configure_django
 
-    Runner().run()
+    Runner().run_from_cli()

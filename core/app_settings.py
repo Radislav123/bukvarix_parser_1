@@ -2,11 +2,17 @@ import abc
 import logging
 import os
 
+from .apps import CoreConfig
+
 
 # todo: copy to parsing_helper
-class ParserSettings(abc.ABC):
+class CoreSettings(abc.ABC):
     def __init__(self):
         self.PROJECT_ROOT = os.path.dirname(os.path.abspath(f"{__file__}/.."))
+        self.APP_NAME = CoreConfig.name
+
+        # настройки парсера
+        self.PARSING_HISTORY_DEPTH = 10
 
         # настройки административной панели
         # noinspection SpellCheckingInspection
@@ -25,10 +31,14 @@ class ParserSettings(abc.ABC):
         self.CONSOLE_LOG_LEVEL = logging.DEBUG
         self.FILE_LOG_LEVEL = logging.DEBUG
 
-        # настройки pytest
-        self.PYTEST_ARGS = [
+    # настройки pytest
+    # noinspection PyPep8Naming
+    @property
+    def PYTEST_ARGS(self) -> list[str]:
+        return [
             # путь до тестов
-            "-o", f"testpaths={self.APP_ROOT}",
+            # "-o", f"testpaths={self.APP_ROOT}",
+            "-o", f"testpaths={self.APP_NAME}",
 
             # игнорирование базовых тестов (родителей для наследования)
             "--ignore-glob=**/*base*",
@@ -67,6 +77,5 @@ class ParserSettings(abc.ABC):
 
     # noinspection PyPep8Naming
     @property
-    @abc.abstractmethod
     def APP_ROOT(self) -> str:
-        raise NotImplementedError()
+        return os.path.normpath(f"{self.PROJECT_ROOT}/{self.APP_NAME}")

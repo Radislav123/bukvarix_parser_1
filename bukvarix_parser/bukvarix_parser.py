@@ -3,7 +3,6 @@ import os
 import random
 import shutil
 import time
-from typing import Dict, List, Tuple
 
 import pandas
 from selenium.common.exceptions import TimeoutException
@@ -11,26 +10,23 @@ from selenium.webdriver import Chrome, ChromeOptions
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-from secret_keeper import SecretKeeper
+from core.base_parser import BaseParser
 from . import models
+from .app_settings import BukvarixSettings
 from .pages import LoginPage, SearchPage
-from .settings import BukvarixSettings
 
 
-class BukvarixParser:
-    """Отвечает за весь процесс парсинга."""
-
-    parsing: models.Parsing
+class BukvarixParser(BaseParser):
     driver: Chrome
-    secrets: SecretKeeper
-    settings: BukvarixSettings
-    _proxies: dict = None
+    app_settings: BukvarixSettings
+    app_settings_class = BukvarixSettings
+    domains_model = models.DomainsParsingList
 
     def setup_method(self) -> None:
-        self.settings = BukvarixSettings()
-        if os.path.exists(self.settings.DOWNLOADS):
-            shutil.rmtree(self.settings.DOWNLOADS)
-        self.secrets = SecretKeeper()
+        super().setup_method()
+
+        if os.path.exists(self.app_settings.DOWNLOADS):
+            shutil.rmtree(self.app_settings.DOWNLOADS)
 
         options = ChromeOptions()
         # этот параметр тоже нужен, так как в режиме headless с некоторыми элементами нельзя взаимодействовать
@@ -40,7 +36,7 @@ class BukvarixParser:
         options.add_argument("--window-size=1920,1080")
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
 
-        prefs = {"download.default_directory": self.settings.DOWNLOADS}
+        prefs = {"download.default_directory": self.app_settings.DOWNLOADS}
         options.add_experimental_option("prefs", prefs)
 
         driver_manager = ChromeDriverManager(path = "").install()
@@ -53,30 +49,13 @@ class BukvarixParser:
         self.driver = Chrome(**parameters)
         self.driver.maximize_window()
 
-        self.parsing = models.Parsing(capacity = 0, parser_name = self.__class__.__name__)
-        self.parsing.save()
-
     def teardown_method(self) -> None:
+        super().teardown_method()
+
+        self.keep_parsing_history_depth()
         self.driver.quit()
 
-    def update_progress(self, addition: int) -> None:
-        self.parsing.current += addition
-        self.parsing.save()
-
-    @staticmethod
-    def get_domains() -> List[str]:
-        # domains = self.read_domains_from_xlsx(settings.TEST_DOMAINS)
-        # noinspection PyUnresolvedReferences
-        instances = models.DomainsParsingList.objects.all()
-        if len(instances) > 0:
-            instance = instances[0]
-            domains = [x.strip() for x in instance.domains.split()]
-            domains = [x for x in domains if x]
-        else:
-            domains = []
-        return domains
-
-    def get_filtered_domains(self, dataframe: pandas.DataFrame) -> Dict[str, Tuple[str, pandas.DataFrame]]:
+    def get_filtered_domains(self, dataframe: pandas.DataFrame) -> dict[str, tuple[str, pandas.DataFrame]]:
         """Возвращает список доменов, количество ключевых слов которого превышает 50 (settings.DOMAIN_WORDS_AMOUNT)."""
 
         domains = {}
@@ -84,13 +63,13 @@ class BukvarixParser:
             header: str
             domain = header.split()[-1]
             filtered = dataframe[dataframe[header] > 0]
-            if len(filtered) > self.settings.DOMAIN_WORDS_AMOUNT:
+            if len(filtered) > self.app_settings.DOMAIN_WORDS_AMOUNT:
                 domains[header] = (domain, filtered)
 
         return domains
 
     def process_downloaded_data(self) -> None:
-        files = glob.glob(f"{self.settings.DOWNLOADS}/*")
+        files = glob.glob(f"{self.app_settings.DOWNLOADS}/*")
         for filename in files:
             dataframe = pandas.read_csv(filename, delimiter = ';')
             filtered_domains = self.get_filtered_domains(dataframe)
@@ -105,14 +84,8 @@ class BukvarixParser:
                 domain.frequency_sum_top_10 = top_10['"!Частотность !Весь !мир"'].sum()
                 domain.frequency_sum_top_3 = top_3['"!Частотность !Весь !мир"'].sum()
                 domain.save()
-            self.update_progress(self.settings.REQUEST_DOMAINS_AMOUNT)
+            self.update_progress(self.app_settings.REQUEST_DOMAINS_AMOUNT)
         self.update_progress(self.parsing.capacity - self.parsing.current)
-
-    def keep_parsing_history_depth(self):
-        # noinspection PyUnresolvedReferences
-        instances_to_delete = models.Parsing.objects.order_by("start_time")[self.settings.PARSING_HISTORY_DEPTH:]
-        # noinspection PyUnresolvedReferences
-        models.Parsing.objects.filter(id__in = [x.id for x in instances_to_delete]).delete()
 
     def run(self) -> None:
         login_page = LoginPage(self.driver)
@@ -124,17 +97,17 @@ class BukvarixParser:
         self.parsing.capacity = progress_capacity
         self.parsing.save()
 
-        for start in range(0, len(domains), self.settings.REQUEST_DOMAINS_AMOUNT):
+        for start in range(0, len(domains), self.app_settings.REQUEST_DOMAINS_AMOUNT):
             if start != 0:
                 time.sleep(random.randint(15, 45))
             search_page = SearchPage(self.driver)
             search_page.open()
-            search_page.search(domains[start:start + self.settings.REQUEST_DOMAINS_AMOUNT])
+            search_page.search(domains[start:start + self.app_settings.REQUEST_DOMAINS_AMOUNT])
             try:
                 search_page.download_button.click()
             except TimeoutException:
                 pass
-            addition = self.settings.REQUEST_DOMAINS_AMOUNT
+            addition = self.app_settings.REQUEST_DOMAINS_AMOUNT
             if start + addition > len(domains):
                 addition = len(domains) - start
             self.update_progress(addition)
@@ -144,4 +117,3 @@ class BukvarixParser:
         time.sleep(3)
 
         self.process_downloaded_data()
-        self.keep_parsing_history_depth()

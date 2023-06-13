@@ -1,14 +1,17 @@
 from io import BytesIO
 
 import xlsxwriter
-from django.contrib import admin
 from django.db import models as django_models
 from django.http import HttpRequest, HttpResponse
 
-from run import Runner
+from core import admin as core_admin
 from service import register_models
 from . import models
-from .settings import BukvarixSettings
+from .app_settings import BukvarixSettings
+
+
+class ParsingIdFilter(core_admin.BaseParsingIdFilter):
+    parser_name = "BukvarixParser"
 
 
 # noinspection PyUnusedLocal
@@ -46,18 +49,14 @@ def download_excel(
     book.close()
 
     stream.seek(0)
-    response = HttpResponse(stream.read(), content_type = admin_model.settings.DOWNLOAD_EXCEL_CONTENT_TYPE)
+    response = HttpResponse(stream.read(), content_type = admin_model.app_settings.DOWNLOAD_EXCEL_CONTENT_TYPE)
     response["Content-Disposition"] = f"attachment;filename={model_name}.xlsx"
     return response
 
 
-# noinspection PyUnusedLocal
-def run_parsing(admin_model: "DomainAdmin", request: HttpRequest, queryset: django_models.QuerySet) -> None:
-    Runner().run_from_code([])
-
-
-class BukvarixAdmin(admin.ModelAdmin):
+class BukvarixAdmin(core_admin.CoreAdmin):
     model: models.BukvarixModel
+    app_settings_class = BukvarixSettings
 
 
 class DomainAdmin(BukvarixAdmin):
@@ -71,22 +70,16 @@ class DomainAdmin(BukvarixAdmin):
         "frequency_sum_top_3",
         "parsing_id"
     )
-    list_filter = ("parsing__id",)
+    list_filter = (ParsingIdFilter,)
     actions = (download_excel,)
-
-    def __init__(self, model, admin_site):
-        super().__init__(model, admin_site)
-        self.settings = BukvarixSettings()
 
     # noinspection PyMethodMayBeStatic
     def parsing_id(self, obj: model):
         return obj.parsing.id
 
 
-class DomainsParsingListAdmin(BukvarixAdmin):
+class DomainsParsingListAdmin(BukvarixAdmin, core_admin.DomainsParsingListCoreAdmin):
     model = models.DomainsParsingList
-    list_display = ("domains",)
-    actions = (run_parsing,)
 
 
 register_models(BukvarixAdmin, models.BukvarixModel)
