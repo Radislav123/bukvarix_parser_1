@@ -1,11 +1,11 @@
 from parsing_helper.web_elements import ExtendedWebElement
 from selenium.webdriver import Chrome
 
-from .bukvarix_base_page import BukvarixBasePage
+from .base_page import BasePage
 
 
 # https://www.bukvarix.com/login/
-class LoginPage(BukvarixBasePage):
+class LoginPage(BasePage):
     path = "login"
 
     def __init__(self, driver: Chrome) -> None:

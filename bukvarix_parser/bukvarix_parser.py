@@ -12,7 +12,7 @@ from selenium.webdriver import Chrome, ChromeOptions
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-from pages import LoginPage, SearchPage
+from .pages import LoginPage, SearchPage
 from . import models, settings
 from .secret_keeper import SecretKeeper
 

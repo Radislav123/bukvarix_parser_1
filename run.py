@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from parser_app import settings
+from bukvarix_parser import settings
 
 
 class Runner:

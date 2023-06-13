@@ -3,11 +3,11 @@ from typing import List
 from parsing_helper.web_elements import ExtendedWebElement, ExtendedWebElementCollection
 from selenium.webdriver import Chrome
 
-from .bukvarix_base_page import BukvarixBasePage
+from .base_page import BasePage
 
 
 # https://www.bukvarix.com/mcmp/
-class SearchPage(BukvarixBasePage):
+class SearchPage(BasePage):
     # noinspection SpellCheckingInspection
     path = "mcmp"
 

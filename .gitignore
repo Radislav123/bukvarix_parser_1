@@ -24,5 +24,5 @@ secrets/
 parser_data/
 
 # разное
-TZ.docx
+TZ_*.docx
 downloads/
