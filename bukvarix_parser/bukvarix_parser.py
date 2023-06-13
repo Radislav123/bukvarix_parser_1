@@ -5,16 +5,16 @@ import shutil
 import time
 from typing import Dict, List, Tuple
 
-import openpyxl
 import pandas
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import Chrome, ChromeOptions
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
+from secret_keeper import SecretKeeper
+from . import models
 from .pages import LoginPage, SearchPage
-from . import models, settings
-from .secret_keeper import SecretKeeper
+from .settings import BukvarixSettings
 
 
 class BukvarixParser:
@@ -23,11 +23,13 @@ class BukvarixParser:
     parsing: models.Parsing
     driver: Chrome
     secrets: SecretKeeper
+    settings: BukvarixSettings
     _proxies: dict = None
 
     def setup_method(self) -> None:
-        if os.path.exists(settings.DOWNLOADS):
-            shutil.rmtree(settings.DOWNLOADS)
+        self.settings = BukvarixSettings()
+        if os.path.exists(self.settings.DOWNLOADS):
+            shutil.rmtree(self.settings.DOWNLOADS)
         self.secrets = SecretKeeper()
 
         options = ChromeOptions()
@@ -38,7 +40,7 @@ class BukvarixParser:
         options.add_argument("--window-size=1920,1080")
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
 
-        prefs = {"download.default_directory": settings.DOWNLOADS}
+        prefs = {"download.default_directory": self.settings.DOWNLOADS}
         options.add_experimental_option("prefs", prefs)
 
         driver_manager = ChromeDriverManager(path = "").install()
@@ -51,7 +53,7 @@ class BukvarixParser:
         self.driver = Chrome(**parameters)
         self.driver.maximize_window()
 
-        self.parsing = models.Parsing(capacity = 0)
+        self.parsing = models.Parsing(capacity = 0, parser_name = self.__class__.__name__)
         self.parsing.save()
 
     def teardown_method(self) -> None:
@@ -60,17 +62,6 @@ class BukvarixParser:
     def update_progress(self, addition: int) -> None:
         self.parsing.current += addition
         self.parsing.save()
-
-    @staticmethod
-    def read_domains_from_xlsx(path: str) -> List[str]:
-        book = openpyxl.load_workbook(path)
-        sheet = book.active
-        domains = []
-        row = 1
-        while sheet.cell(row, 1).value:
-            domains.append(sheet.cell(row, 1).value)
-            row += 1
-        return domains
 
     @staticmethod
     def get_domains() -> List[str]:
@@ -85,8 +76,7 @@ class BukvarixParser:
             domains = []
         return domains
 
-    @staticmethod
-    def get_filtered_domains(dataframe: pandas.DataFrame) -> Dict[str, Tuple[str, pandas.DataFrame]]:
+    def get_filtered_domains(self, dataframe: pandas.DataFrame) -> Dict[str, Tuple[str, pandas.DataFrame]]:
         """Возвращает список доменов, количество ключевых слов которого превышает 50 (settings.DOMAIN_WORDS_AMOUNT)."""
 
         domains = {}
@@ -94,13 +84,13 @@ class BukvarixParser:
             header: str
             domain = header.split()[-1]
             filtered = dataframe[dataframe[header] > 0]
-            if len(filtered) > settings.DOMAIN_WORDS_AMOUNT:
+            if len(filtered) > self.settings.DOMAIN_WORDS_AMOUNT:
                 domains[header] = (domain, filtered)
 
         return domains
 
     def process_downloaded_data(self) -> None:
-        files = glob.glob(f"{settings.DOWNLOADS}/*")
+        files = glob.glob(f"{self.settings.DOWNLOADS}/*")
         for filename in files:
             dataframe = pandas.read_csv(filename, delimiter = ';')
             filtered_domains = self.get_filtered_domains(dataframe)
@@ -115,13 +105,12 @@ class BukvarixParser:
                 domain.frequency_sum_top_10 = top_10['"!Частотность !Весь !мир"'].sum()
                 domain.frequency_sum_top_3 = top_3['"!Частотность !Весь !мир"'].sum()
                 domain.save()
-            self.update_progress(settings.REQUEST_DOMAINS_AMOUNT)
+            self.update_progress(self.settings.REQUEST_DOMAINS_AMOUNT)
         self.update_progress(self.parsing.capacity - self.parsing.current)
 
-    @staticmethod
-    def keep_parsing_history_depth():
+    def keep_parsing_history_depth(self):
         # noinspection PyUnresolvedReferences
-        instances_to_delete = models.Parsing.objects.order_by("start_time")[settings.PARSING_HISTORY_DEPTH:]
+        instances_to_delete = models.Parsing.objects.order_by("start_time")[self.settings.PARSING_HISTORY_DEPTH:]
         # noinspection PyUnresolvedReferences
         models.Parsing.objects.filter(id__in = [x.id for x in instances_to_delete]).delete()
 
@@ -135,17 +124,17 @@ class BukvarixParser:
         self.parsing.capacity = progress_capacity
         self.parsing.save()
 
-        for start in range(0, len(domains), settings.REQUEST_DOMAINS_AMOUNT):
+        for start in range(0, len(domains), self.settings.REQUEST_DOMAINS_AMOUNT):
             if start != 0:
                 time.sleep(random.randint(15, 45))
             search_page = SearchPage(self.driver)
             search_page.open()
-            search_page.search(domains[start:start + settings.REQUEST_DOMAINS_AMOUNT])
+            search_page.search(domains[start:start + self.settings.REQUEST_DOMAINS_AMOUNT])
             try:
                 search_page.download_button.click()
             except TimeoutException:
                 pass
-            addition = settings.REQUEST_DOMAINS_AMOUNT
+            addition = self.settings.REQUEST_DOMAINS_AMOUNT
             if start + addition > len(domains):
                 addition = len(domains) - start
             self.update_progress(addition)

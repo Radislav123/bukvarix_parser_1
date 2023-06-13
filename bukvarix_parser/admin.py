@@ -6,7 +6,9 @@ from django.db import models as django_models
 from django.http import HttpRequest, HttpResponse
 
 from run import Runner
-from . import models, settings
+from service import register_models
+from . import models
+from .settings import BukvarixSettings
 
 
 # noinspection PyUnusedLocal
@@ -44,7 +46,7 @@ def download_excel(
     book.close()
 
     stream.seek(0)
-    response = HttpResponse(stream.read(), content_type = settings.DOWNLOAD_EXCEL_CONTENT_TYPE)
+    response = HttpResponse(stream.read(), content_type = admin_model.settings.DOWNLOAD_EXCEL_CONTENT_TYPE)
     response["Content-Disposition"] = f"attachment;filename={model_name}.xlsx"
     return response
 
@@ -54,16 +56,11 @@ def run_parsing(admin_model: "DomainAdmin", request: HttpRequest, queryset: djan
     Runner().run_from_code([])
 
 
-class ProjectAdmin(admin.ModelAdmin):
-    model: models.ProjectModel
+class BukvarixAdmin(admin.ModelAdmin):
+    model: models.BukvarixModel
 
 
-class ParsingAdmin(ProjectAdmin):
-    model = models.Parsing
-    list_display = ("start_time", "id", "current", "capacity")
-
-
-class DomainAdmin(ProjectAdmin):
+class DomainAdmin(BukvarixAdmin):
     model = models.Domain
     list_display = (
         "name",
@@ -77,26 +74,19 @@ class DomainAdmin(ProjectAdmin):
     list_filter = ("parsing__id",)
     actions = (download_excel,)
 
+    def __init__(self, model, admin_site):
+        super().__init__(model, admin_site)
+        self.settings = BukvarixSettings()
+
     # noinspection PyMethodMayBeStatic
     def parsing_id(self, obj: model):
         return obj.parsing.id
 
 
-class DomainsParsingListAdmin(ProjectAdmin):
+class DomainsParsingListAdmin(BukvarixAdmin):
     model = models.DomainsParsingList
     list_display = ("domains",)
     actions = (run_parsing,)
 
 
-def register_models():
-    models_with_admin_page = ProjectAdmin.__subclasses__()
-
-    for admin_model in models_with_admin_page:
-        admin.site.register(admin_model.model, admin_model)
-
-    for model in [x for x in models.ProjectModel.__subclasses__() if
-                  x not in [y.model for y in models_with_admin_page]]:
-        admin.site.register(model)
-
-
-register_models()
+register_models(BukvarixAdmin, models.BukvarixModel)

@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from bukvarix_parser import settings
+from bukvarix_parser.settings import BukvarixSettings
 
 
 class Runner:
@@ -30,6 +30,7 @@ class Runner:
 
     @staticmethod
     def pytest(args):
+        settings = BukvarixSettings()
         pytest_args = copy.deepcopy(settings.PYTEST_ARGS)
         pytest_args.extend(args)
         pytest.main(pytest_args)
