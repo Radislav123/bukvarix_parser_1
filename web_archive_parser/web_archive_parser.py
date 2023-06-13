@@ -48,7 +48,10 @@ class WebArchiveParser(BaseParser):
                 self.update_progress(1)
 
                 snapshot_response = requests.get(snapshot_url)
-                title = re.search('<title>(.*)</title>', snapshot_response.text).group(1)
+                try:
+                    title = re.search('<title>(.*)</title>', snapshot_response.text).group(1)
+                except AttributeError:
+                    title = None
                 snapshot = models.Snapshot(
                     parsing = self.parsing,
                     domain = domain,
