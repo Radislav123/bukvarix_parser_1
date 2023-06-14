@@ -35,7 +35,7 @@ class WebArchiveParser(BaseParser):
             params = {
                 "url": domain,
                 "filter": "statuscode:200",
-                "limit": 1,
+                "limit": -1,
                 "output": "json"
             }
 
@@ -48,6 +48,8 @@ class WebArchiveParser(BaseParser):
                 self.update_progress(1)
 
                 snapshot_response = requests.get(snapshot_url)
+                if snapshot_response.headers["x-archive-guessed-charset"] != "latin1":
+                    snapshot_response.encoding = snapshot_response.headers["x-archive-guessed-charset"]
                 try:
                     title = re.search('<title>(.*)</title>', snapshot_response.text).group(1)
                 except AttributeError:
