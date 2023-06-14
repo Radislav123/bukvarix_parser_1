@@ -25,7 +25,6 @@ def download_excel(
     book = xlsxwriter.Workbook(stream, {"remove_timezone": True})
     sheet = book.add_worksheet(model_name)
 
-    # {name: column width}
     # noinspection PyUnresolvedReferences,PyProtectedMember
     header = [
         models.Domain._meta.get_field("name").verbose_name,

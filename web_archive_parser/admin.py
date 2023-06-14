@@ -1,3 +1,8 @@
+from io import BytesIO
+
+import xlsxwriter
+from django.db import models as django_models
+from django.http import HttpRequest, HttpResponse
 from django.utils.html import format_html
 
 from core import admin as core_admin
@@ -10,6 +15,39 @@ class ParsingIdFilter(core_admin.BaseParsingIdFilter):
     parser_name = "WebArchiveParser"
 
 
+# noinspection PyUnusedLocal
+def download_excel(
+        admin_model: "SnapshotAdmin",
+        request: HttpRequest,
+        queryset: django_models.QuerySet
+) -> HttpResponse:
+    model_name = f"{admin_model.model.__name__}"
+    stream = BytesIO()
+    book = xlsxwriter.Workbook(stream, {"remove_timezone": True})
+    sheet = book.add_worksheet(model_name)
+
+    # noinspection PyUnresolvedReferences,PyProtectedMember
+    header = [
+        models.Snapshot._meta.get_field("domain").verbose_name,
+        models.Snapshot._meta.get_field("title").verbose_name,
+        models.Snapshot._meta.get_field("url").verbose_name
+    ]
+    for row_number, column_name in enumerate(header):
+        sheet.write(0, row_number, column_name)
+    for row_number, data in enumerate(queryset, 1):
+        data: admin_model.model
+        sheet.write(row_number, 0, data.domain)
+        sheet.write(row_number, 1, data.title)
+        sheet.write(row_number, 2, data.url)
+    sheet.autofit()
+    book.close()
+
+    stream.seek(0)
+    response = HttpResponse(stream.read(), content_type = admin_model.app_settings.DOWNLOAD_EXCEL_CONTENT_TYPE)
+    response["Content-Disposition"] = f"attachment;filename={model_name}.xlsx"
+    return response
+
+
 class WebArchiveAdmin(core_admin.CoreAdmin):
     model: models.WebArchiveModel
     app_settings_class = WebArchiveSettings
@@ -19,6 +57,7 @@ class SnapshotAdmin(WebArchiveAdmin):
     model = models.Snapshot
     list_display = ("domain", "title", "clickable_url", "parsing_id")
     list_filter = (ParsingIdFilter,)
+    actions = (download_excel,)
 
     def clickable_url(self, obj: model):
         return format_html(f'<a target="_blank" href="{obj.url}">{obj.url}</a>')
