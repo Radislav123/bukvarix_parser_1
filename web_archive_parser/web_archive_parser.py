@@ -1,3 +1,4 @@
+import datetime
 import re
 
 import requests
@@ -13,8 +14,12 @@ class WebArchiveParser(BaseParser):
     domains_model = models.DomainsParsingList
 
     @staticmethod
-    def get_snapshot_url(site: str, timestamp: str) -> str:
-        return f"https://web.archive.org/web/{timestamp}/https://{site}/"
+    def get_snapshot_url(site: str, timestamp_str: str, exists_in_archive: bool) -> str:
+        if exists_in_archive:
+            url = f"https://web.archive.org/web/{timestamp_str}/https://{site}/"
+        else:
+            url = f"https://web.archive.org/web/{timestamp_str}/{site}/"
+        return url
 
     @staticmethod
     def retrieve_field(data: list[list[str]], field_name: str, snapshot_number: int = None) -> str:
@@ -41,10 +46,11 @@ class WebArchiveParser(BaseParser):
 
             timestamp_response = requests.get(url, params)
             data = timestamp_response.json()
+            exists_in_archive = len(data) > 0
 
-            if len(data) > 0:
-                timestamp = self.retrieve_field(data, "timestamp")
-                snapshot_url = self.get_snapshot_url(params["url"], timestamp)
+            if exists_in_archive:
+                timestamp_str = self.retrieve_field(data, "timestamp")
+                snapshot_url = self.get_snapshot_url(params["url"], timestamp_str, exists_in_archive)
                 self.update_progress(1)
 
                 snapshot_response = requests.get(snapshot_url)
@@ -58,9 +64,19 @@ class WebArchiveParser(BaseParser):
                     parsing = self.parsing,
                     domain = domain,
                     title = title,
-                    url = snapshot_url
+                    url = snapshot_url,
+                    exists_in_archive = exists_in_archive
+                )
+            else:
+                timestamp_str = f"{datetime.date.today().year}0000000000*"
+                snapshot = models.Snapshot(
+                    parsing = self.parsing,
+                    domain = domain,
+                    title = None,
+                    url = self.get_snapshot_url(params["url"], timestamp_str, exists_in_archive),
+                    exists_in_archive = exists_in_archive
                 )
                 self.update_progress(1)
-                snapshot.save()
-            else:
-                self.update_progress(2)
+
+            snapshot.save()
+            self.update_progress(1)

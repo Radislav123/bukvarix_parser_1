@@ -30,7 +30,8 @@ def download_excel(
     header = [
         models.Snapshot._meta.get_field("domain").verbose_name,
         models.Snapshot._meta.get_field("title").verbose_name,
-        models.Snapshot._meta.get_field("url").verbose_name
+        models.Snapshot._meta.get_field("url").verbose_name,
+        models.Snapshot._meta.get_field("exists_in_archive").verbose_name,
     ]
     for row_number, column_name in enumerate(header):
         sheet.write(0, row_number, column_name)
@@ -39,6 +40,7 @@ def download_excel(
         sheet.write(row_number, 0, data.domain)
         sheet.write(row_number, 1, data.title)
         sheet.write(row_number, 2, data.url)
+        sheet.write(row_number, 3, data.exists_in_archive)
     sheet.autofit()
     book.close()
 
@@ -55,8 +57,8 @@ class WebArchiveAdmin(core_admin.CoreAdmin):
 
 class SnapshotAdmin(WebArchiveAdmin):
     model = models.Snapshot
-    list_display = ("domain", "title", "clickable_url", "parsing_id")
-    list_filter = (ParsingIdFilter,)
+    list_display = ("domain", "title", "clickable_url", "exists_in_archive", "parsing_id")
+    list_filter = (ParsingIdFilter, "exists_in_archive")
     actions = (download_excel,)
 
     def clickable_url(self, obj: model):
@@ -68,6 +70,11 @@ class SnapshotAdmin(WebArchiveAdmin):
     # noinspection PyMethodMayBeStatic
     def parsing_id(self, obj: model):
         return obj.parsing.id
+
+    def get_queryset(self, request: HttpRequest) -> django_models.QuerySet:
+        queryset: django_models.QuerySet = super().get_queryset(request)
+        new_queryset = queryset.order_by("-exists_in_archive")
+        return new_queryset
 
 
 class DomainsParsingListAdmin(WebArchiveAdmin, core_admin.DomainsParsingListCoreAdmin):

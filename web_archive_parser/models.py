@@ -13,6 +13,7 @@ class Snapshot(WebArchiveModel):
     domain = models.CharField("Домен", max_length = 256)
     title = models.TextField("Содержимое тега <title>", null = True)
     url = models.URLField("Ссылка на снимок")
+    exists_in_archive = models.BooleanField("Присутствие в архиве")
 
 
 class DomainsParsingList(core_models.DomainsParsingListModel):

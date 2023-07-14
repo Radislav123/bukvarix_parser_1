@@ -98,6 +98,7 @@ class BukvarixParser(BaseParser):
 
         for start in range(0, len(domains), self.app_settings.REQUEST_DOMAINS_AMOUNT):
             if start != 0:
+                # ожидание по желанию заказчика
                 time.sleep(random.randint(15, 45))
             search_page = SearchPage(self.driver)
             search_page.open()
