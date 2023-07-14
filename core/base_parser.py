@@ -22,7 +22,7 @@ class BaseParser:
         self.parsing.save()
 
     def teardown_method(self) -> None:
-        pass
+        self.keep_parsing_history_depth()
 
     def update_progress(self, addition: int) -> None:
         self.parsing.current += addition

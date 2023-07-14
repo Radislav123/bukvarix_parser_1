@@ -52,7 +52,6 @@ class BukvarixParser(BaseParser):
     def teardown_method(self) -> None:
         super().teardown_method()
 
-        self.keep_parsing_history_depth()
         self.driver.quit()
 
     def get_filtered_domains(self, dataframe: pandas.DataFrame) -> dict[str, tuple[str, pandas.DataFrame]]:
