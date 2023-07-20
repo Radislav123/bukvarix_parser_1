@@ -22,10 +22,18 @@ class WebArchiveParser(BaseParser):
         return url
 
     @staticmethod
-    def retrieve_field(data: list[list[str]], field_name: str, snapshot_number: int = None) -> str:
-        if snapshot_number is None:
-            snapshot_number = 1
+    def retrieve_field(data: list[list[str]], field_name: str, snapshot_number: int) -> str:
         return data[snapshot_number][data[0].index(field_name)]
+
+    @classmethod
+    def get_last_snapshot_number(cls, data) -> int:
+        last_date = -1
+        last_number = None
+        for number in range(1, len(data)):
+            if date := int(cls.retrieve_field(data, "timestamp", number)) > last_date:
+                last_date = date
+                last_number = number
+        return last_number
 
     def run(self) -> None:
         # noinspection HttpUrlsUsage
@@ -40,7 +48,6 @@ class WebArchiveParser(BaseParser):
             params = {
                 "url": domain,
                 "filter": "statuscode:200",
-                "limit": -1,
                 "output": "json"
             }
 
@@ -49,7 +56,7 @@ class WebArchiveParser(BaseParser):
             exists_in_archive = len(data) > 0
 
             if exists_in_archive:
-                timestamp_str = self.retrieve_field(data, "timestamp")
+                timestamp_str = self.retrieve_field(data, "timestamp", self.get_last_snapshot_number(data))
                 snapshot_url = self.get_snapshot_url(params["url"], timestamp_str, exists_in_archive)
                 self.update_progress(1)
 
